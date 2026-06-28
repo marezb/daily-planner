@@ -363,7 +363,10 @@ function sortTasksArray(arr) {
         const stateA = a.state || 0;
         const stateB = b.state || 0;
         if (stateA !== stateB) return stateA - stateB;
-        return (a.Order || 999999) - (b.Order || 999999);
+        
+        const orderA = a.Order !== undefined ? a.Order : 999999;
+        const orderB = b.Order !== undefined ? b.Order : 999999;
+        return orderA - orderB;
     });
 }
 
