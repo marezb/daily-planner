@@ -202,12 +202,11 @@ function closePanel() {
 futureLogBtn.addEventListener("click", () => {
     futurePanel.classList.toggle("hidden");
     if (!futurePanel.classList.contains("hidden")) {
-        // Kiedy panel staje się widoczny, wymuś przeliczenie wysokości tekstów (które dotąd miały height=0 z powodu display: none)
+        // Zamiast walczyć z przeliczaniem wysokości na ukrytych elementach,
+        // po prostu rysujemy cały Future Log na nowo, gdy panel staje się widoczny!
         setTimeout(() => {
-            futurePanel.querySelectorAll('.task-text').forEach(ta => {
-                ta.dispatchEvent(new Event('input'));
-            });
-        }, 10);
+            renderFutureTasks();
+        }, 50);
     }
 });
 
@@ -387,11 +386,11 @@ function handleDragEnd(evt) {
         // Insert copied task at the new position
         targetArr.splice(evt.newIndex, 0, copiedTask);
         
-        if (sourceIsFuture) {
-            // Task opuszcza Future Log - usuwamy go stamtąd bezpowrotnie
+        if (sourceIsFuture || targetIsFuture) {
+            // Task opuszcza Future Log ALBO do niego wraca - w obu przypadkach jest to przeniesienie fizyczne (bez szarej ikony migracji)
             sourceArr.splice(evt.oldIndex, 1);
         } else {
-            // Mark original task as migrated (jeśli to był normalny dzień)
+            // Mark original task as migrated (jeśli to był normalny dzień na inny normalny dzień)
             originalItem.state = 2; // Migrated state (▶)
             originalItem.was_migrated = true;
         }
