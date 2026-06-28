@@ -201,6 +201,14 @@ function closePanel() {
 
 futureLogBtn.addEventListener("click", () => {
     futurePanel.classList.toggle("hidden");
+    if (!futurePanel.classList.contains("hidden")) {
+        // Kiedy panel staje się widoczny, wymuś przeliczenie wysokości tekstów (które dotąd miały height=0 z powodu display: none)
+        setTimeout(() => {
+            futurePanel.querySelectorAll('.task-text').forEach(ta => {
+                ta.dispatchEvent(new Event('input'));
+            });
+        }, 10);
+    }
 });
 
 closeFutureBtn.addEventListener("click", closePanel);
@@ -379,9 +387,14 @@ function handleDragEnd(evt) {
         // Insert copied task at the new position
         targetArr.splice(evt.newIndex, 0, copiedTask);
         
-        // Mark original task as migrated
-        originalItem.state = 2; // Migrated state (▶)
-        originalItem.was_migrated = true;
+        if (sourceIsFuture) {
+            // Task opuszcza Future Log - usuwamy go stamtąd bezpowrotnie
+            sourceArr.splice(evt.oldIndex, 1);
+        } else {
+            // Mark original task as migrated (jeśli to był normalny dzień)
+            originalItem.state = 2; // Migrated state (▶)
+            originalItem.was_migrated = true;
+        }
     }
     
     // Update order
