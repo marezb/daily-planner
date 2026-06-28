@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Daily Planner</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#032d42">
+    <!-- Google Identity Services i Google API -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
+    <!-- SortableJS -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <h1 id="global-today-display" style="font-size: 1.5rem; margin: 0; white-space: nowrap;">Daily Planner</h1>
+            <div class="date-navigator" style="margin: 0; padding: 0; background: transparent;">
+                <button id="prev-half" class="icon-btn">◀</button>
+                <button id="today-btn" class="icon-btn" style="font-size: 1.5rem; line-height: 1;">•</button>
+                <button id="next-half" class="icon-btn">▶</button>
+            </div>
+        </div>
+        <div class="header-right">
+            <button id="future-log-btn" class="btn hidden">Future Log</button>
+            <button id="login-btn" class="btn">Zaloguj przez Google</button>
+        </div>
+    </header>
+    
+    <div id="main-wrapper" class="hidden">
+        <main id="app-content">
+            <div id="days-container">
+                <!-- Karty dni renderowane przez JS -->
+            </div>
+        </main>
+
+        <aside id="future-panel" class="hidden">
+            <div class="panel-header">
+                <h2>Future Log</h2>
+                <button id="close-future-btn" class="icon-btn">✕</button>
+            </div>
+            <div id="future-tasks-container">
+                <!-- Zadania z future_log.json -->
+            </div>
+            <button id="add-future-task-btn" class="text-add-btn">+ Add task</button>
+        </aside>
+    </div>
+
+    <div id="loading" class="hidden">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>

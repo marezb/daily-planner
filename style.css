@@ -1,0 +1,350 @@
+:root {
+    --bg-color: #1c4255;
+    --panel-bg: #032d42;
+    --text-color: #f5f6f7;
+    --accent-color: #bddee7;
+    --muted-text: #8f969b;
+    --task-bg: rgba(3, 45, 66, 0.7);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Roboto Condensed', sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 0;
+}
+
+.hidden {
+    display: none !important;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--panel-bg);
+    padding: 8px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.header-left, .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+h1 {
+    font-size: 1.2rem !important;
+    color: var(--text-color);
+}
+
+.btn {
+    background-color: var(--accent-color);
+    color: #000;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.icon-btn {
+    background: transparent;
+    border: none;
+    color: var(--accent-color);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 8px;
+}
+
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.date-navigator {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background-color: var(--panel-bg);
+    padding: 8px 16px;
+    border-radius: 8px;
+}
+
+#days-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.day-card {
+    background-color: var(--panel-bg);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid transparent;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Styl dla dnia dzisiejszego */
+.day-card.today-card {
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.day-card.today-card .day-header {
+    background-color: rgba(255, 255, 255, 0.15);
+    margin: -12px -12px 12px -12px;
+    padding: 12px;
+    border-radius: 8px 8px 0 0;
+}
+
+.day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.day-header:hover {
+    color: var(--accent-color);
+}
+
+.tasks-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.text-add-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted-text);
+    padding: 8px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: color 0.2s;
+    margin-top: 4px;
+}
+.text-add-btn:hover {
+    color: var(--text-color);
+}
+
+#tasks-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 80px; /* miejsce na fab */
+    min-height: 200px;
+}
+
+.task-item {
+    background-color: transparent;
+    padding: 4px 0;
+    border-radius: 4px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.task-state {
+    background: transparent;
+    border: none;
+    color: var(--accent-color);
+    font-size: 1rem;
+    cursor: pointer;
+    min-width: 20px;
+}
+
+.task-text {
+    flex-grow: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    font-size: 0.9rem;
+    outline: none;
+    resize: none;
+    padding: 2px 0;
+    min-height: 20px;
+    overflow: hidden;
+}
+
+.task-item.completed .task-text, .task-item.migrated .task-text {
+    color: var(--muted-text);
+    text-decoration: none;
+}
+
+.delete-btn {
+    background: transparent;
+    border: none;
+    color: #4a5c68;
+    font-size: 0.9rem;
+    cursor: pointer;
+    min-width: 20px;
+    padding: 2px;
+    transition: color 0.2s;
+}
+
+.delete-btn:hover {
+    color: #ff5555;
+}
+
+/* Usunięte .fab */
+
+/* Drag Handle */
+.drag-handle {
+    cursor: grab;
+    color: var(--muted-text);
+    font-size: 1.2rem;
+    padding-right: 8px;
+    display: flex;
+    align-items: center;
+    z-index: 10;
+}
+
+#future-panel .fab {
+    position: absolute;
+}
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+/* Side-by-side Layout */
+#main-wrapper {
+    display: flex;
+    flex-grow: 1;
+    gap: 16px;
+    overflow: hidden;
+    padding: 16px;
+}
+
+#main-wrapper.hidden {
+    display: none !important;
+}
+
+#app-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+#app-content.hidden {
+    display: none !important;
+}
+
+#future-panel {
+    width: 400px;
+    flex-shrink: 0;
+    background-color: var(--panel-bg);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: -4px 0 16px rgba(0,0,0,0.3);
+}
+
+#future-panel.hidden {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
+    #main-wrapper {
+        flex-direction: column;
+    }
+    #future-panel {
+        width: 100%;
+        flex-grow: 1;
+    }
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+#future-tasks-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-bottom: 16px;
+    overflow-y: auto;
+    min-height: 200px;
+}
+
+/* Ghost class for SortableJS */
+.sortable-ghost {
+    opacity: 0.4;
+    background-color: var(--panel-bg);
+}
+
+#loading {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(3, 45, 66, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--accent-color);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.4);
+}
