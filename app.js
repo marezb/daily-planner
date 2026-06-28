@@ -582,7 +582,14 @@ nextHalfBtn.addEventListener("click", () => {
 
 todayBtn.addEventListener("click", () => {
     currentHalfWeekStart = getStartOfHalfWeek(new Date());
-    loadHalfWeek(currentHalfWeekStart);
+    loadHalfWeek(currentHalfWeekStart).then(() => {
+        // Po wyrenderowaniu dni (co robi loadHalfWeek wywołując renderDays)
+        const dzisString = formatDate(new Date());
+        const dzisCard = document.querySelector(`.day-card[data-date="${dzisString}"]`);
+        if (dzisCard) {
+            dzisCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    });
 });
 
 addFutureTaskBtn.addEventListener("click", () => {

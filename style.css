@@ -169,11 +169,11 @@ h1 {
 
 .task-item {
     background-color: transparent;
-    padding: 4px 0;
+    padding: 2px 0;
     border-radius: 4px;
     display: flex;
-    align-items: flex-start;
-    gap: 8px;
+    align-items: center; /* Wyrównanie w pionie ikonek ze sobą */
+    gap: 4px; /* Zmniejszony gap */
 }
 
 .task-state {
@@ -225,9 +225,10 @@ h1 {
     cursor: grab;
     color: var(--muted-text);
     font-size: 1.2rem;
-    padding-right: 8px;
+    padding-right: 4px; /* zmniejszono z 8px */
     display: flex;
     align-items: center;
+    justify-content: center;
     z-index: 10;
 }
 
@@ -280,7 +281,17 @@ h1 {
 
 @media (max-width: 768px) {
     html {
-        font-size: 18px; /* Zwiększenie bazowej czcionki o ~12% */
+        font-size: 20px; /* Zwiększenie bazowej czcionki jeszcze mocniej */
+    }
+    header {
+        padding: 8px 8px; /* Mniejsze marginesy na brzegach ekranu */
+    }
+    .header-left, .header-right {
+        gap: 8px; /* Zwężenie przerw w nagłówku */
+    }
+    .date-navigator {
+        gap: 8px;
+        padding: 8px;
     }
     #main-wrapper {
         flex-direction: column;
@@ -292,10 +303,10 @@ h1 {
     }
     /* Powiększenie dotykowych elementów! */
     .task-item {
-        padding: 8px 0; /* Zamiast 4px */
+        padding: 4px 0; /* Zmniejszony odstęp między taskami! Było 8px */
     }
     .task-text {
-        font-size: 1.1rem; /* Dużo większy tekst zadania */
+        font-size: 1.2rem; /* Jeszcze większy tekst zadania */
         padding: 4px 0;
         min-height: 28px;
     }
@@ -304,15 +315,15 @@ h1 {
         padding: 8px;
     }
     .icon-btn {
-        padding: 12px; /* Większy obszar klikalny dla ikonek na górze */
+        padding: 12px 8px; /* Większy obszar klikalny, ale mniejszy margines boczny */
     }
     .text-add-btn {
-        font-size: 1.1rem;
+        font-size: 1.2rem; /* Powiększono */
         padding: 12px 8px;
     }
     .day-header {
-        font-size: 1.3rem; /* Wyraźniejsze nagłówki dni */
-        padding: 16px 12px;
+        font-size: 1.4rem; /* Wyraźniejsze nagłówki dni */
+        padding: 12px 12px;
     }
 }
 
