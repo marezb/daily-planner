@@ -519,8 +519,10 @@ function renderDays(dates) {
         header.innerHTML = `<span>${isDayDone ? '✓ ' : ''}${formatDisplayDate(dateObj)}</span><span>${doneCount}/${totalCount}</span>`;
         if (isDayDone) {
             header.style.color = 'var(--muted-text)';
+            header.style.textDecoration = 'line-through';
         }
         
+
         header.onclick = () => {
             const isFullscreen = card.classList.contains('fullscreen');
             document.querySelectorAll('.day-card').forEach(c => c.style.display = 'flex');
@@ -755,3 +757,89 @@ async function loadFutureLog() {
     renderFutureTasks();
 }
 
+
+
+// ----------------------------------------------------
+// SWIPE GESTURES & FULLSCREEN
+// ----------------------------------------------------
+
+let touchstartX = 0;
+let touchstartY = 0;
+let touchendX = 0;
+let touchendY = 0;
+
+document.addEventListener('touchstart', e => {
+    touchstartX = e.changedTouches[0].screenX;
+    touchstartY = e.changedTouches[0].screenY;
+}, {passive: true});
+
+document.addEventListener('touchend', e => {
+    touchendX = e.changedTouches[0].screenX;
+    touchendY = e.changedTouches[0].screenY;
+    handleGesture();
+});
+
+function handleGesture() {
+    const diffX = touchendX - touchstartX;
+    const diffY = Math.abs(touchendY - touchstartY);
+    
+    // Ignore swipe if user is scrolling vertically
+    if (diffY > 50 || Math.abs(diffX) < 50) return;
+    
+    // Ignore if cursor is in textarea
+    if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') return;
+    
+    if (diffX < -50) {
+        handleSwipeNext();
+    } else if (diffX > 50) {
+        handleSwipePrev();
+    }
+}
+
+function handleSwipeNext() {
+    const fullscreenCard = document.querySelector('.day-card.fullscreen');
+    if (fullscreenCard) {
+        document.querySelectorAll('.day-card').forEach(c => c.style.display = 'flex');
+        const nextCard = fullscreenCard.nextElementSibling;
+        if (nextCard && nextCard.classList.contains('day-card')) {
+            fullscreenCard.classList.remove('fullscreen');
+            nextCard.classList.add('fullscreen');
+            document.querySelectorAll('.day-card').forEach(c => {
+                if (c !== nextCard) c.style.display = 'none';
+            });
+        } else {
+            currentHalfWeekStart.setDate(currentHalfWeekStart.getDate() + (currentHalfWeekStart.getDay() <= 3 && currentHalfWeekStart.getDay() > 0 ? 3 : 4));
+            currentHalfWeekStart = getStartOfHalfWeek(currentHalfWeekStart);
+            loadHalfWeek(currentHalfWeekStart).then(() => {
+                const cards = document.querySelectorAll('.day-card');
+                if (cards.length > 0) cards[0].querySelector('.day-header').click();
+            });
+        }
+    } else {
+        nextHalfBtn.click();
+    }
+}
+
+function handleSwipePrev() {
+    const fullscreenCard = document.querySelector('.day-card.fullscreen');
+    if (fullscreenCard) {
+        document.querySelectorAll('.day-card').forEach(c => c.style.display = 'flex');
+        const prevCard = fullscreenCard.previousElementSibling;
+        if (prevCard && prevCard.classList.contains('day-card')) {
+            fullscreenCard.classList.remove('fullscreen');
+            prevCard.classList.add('fullscreen');
+            document.querySelectorAll('.day-card').forEach(c => {
+                if (c !== prevCard) c.style.display = 'none';
+            });
+        } else {
+            currentHalfWeekStart.setDate(currentHalfWeekStart.getDate() - (currentHalfWeekStart.getDay() <= 3 && currentHalfWeekStart.getDay() > 0 ? 4 : 3));
+            currentHalfWeekStart = getStartOfHalfWeek(currentHalfWeekStart);
+            loadHalfWeek(currentHalfWeekStart).then(() => {
+                const cards = document.querySelectorAll('.day-card');
+                if (cards.length > 0) cards[cards.length - 1].querySelector('.day-header').click();
+            });
+        }
+    } else {
+        prevHalfBtn.click();
+    }
+}
