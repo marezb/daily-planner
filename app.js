@@ -193,6 +193,15 @@ async function onAuthenticated() {
 
     await loadFutureLog();
     await loadHalfWeek(currentHalfWeekStart);
+    
+    // Automatyczne zjechanie do dnia dzisiejszego zaraz po uruchomieniu aplikacji
+    setTimeout(() => {
+        const dzisString = formatDate(new Date());
+        const dzisCard = document.querySelector(`.day-card[data-date="${dzisString}"]`);
+        if (dzisCard) {
+            dzisCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, 200);
 }
 
 function closePanel() {
@@ -206,6 +215,7 @@ futureLogBtn.addEventListener("click", () => {
         // po prostu rysujemy cały Future Log na nowo, gdy panel staje się widoczny!
         setTimeout(() => {
             renderFutureTasks();
+            futurePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 50);
     }
 });
@@ -431,13 +441,32 @@ function createTaskElement(task, index, isFuture, dateStr = null) {
         this.style.height = (this.scrollHeight) + 'px';
     });
     
-    textInput.addEventListener('change', (e) => {
-        if (isFuture) {
-            futureTasks[index].text = e.target.value;
-            saveFutureTasks();
+    textInput.addEventListener('blur', (e) => {
+        const newVal = e.target.value.trim();
+        if (newVal === "") {
+            // Automatyczne kasowanie pustego zadania po odkliknięciu
+            if (isFuture) {
+                futureTasks.splice(index, 1);
+                renderFutureTasks();
+                saveFutureTasks();
+            } else {
+                getTasksForDate(dateStr).splice(index, 1);
+                renderDays(getHalfWeekDates(currentHalfWeekStart));
+                saveTasksForDate(dateStr);
+            }
         } else {
-            getTasksForDate(dateStr)[index].text = e.target.value;
-            saveTasksForDate(dateStr);
+            // Zapisanie tekstu po edycji
+            if (isFuture) {
+                if (futureTasks[index].text !== newVal) {
+                    futureTasks[index].text = newVal;
+                    saveFutureTasks();
+                }
+            } else {
+                if (getTasksForDate(dateStr)[index].text !== newVal) {
+                    getTasksForDate(dateStr)[index].text = newVal;
+                    saveTasksForDate(dateStr);
+                }
+            }
         }
     });
     
@@ -445,7 +474,7 @@ function createTaskElement(task, index, isFuture, dateStr = null) {
     deleteBtn.className = 'delete-btn';
     deleteBtn.innerHTML = '✕';
     deleteBtn.onclick = () => {
-        if(confirm("Czy na pewno chcesz usunąć to zadanie?")) {
+        if(task.text.trim() === "" || confirm("Czy na pewno chcesz usunąć to zadanie?")) {
             if (isFuture) {
                 futureTasks.splice(index, 1);
                 renderFutureTasks();

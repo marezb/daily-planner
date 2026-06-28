@@ -309,9 +309,9 @@ h1 {
     }
     .task-text {
         font-size: 1.2rem; /* Tekst zadania */
-        padding: 0;
+        padding: 6px 0; /* Delikatny padding zamiast sztywnego line-height */
         margin: 0;
-        line-height: 44px; /* Żeby tekst był idealnie na środku */
+        line-height: 1.2; /* Naturalny odstęp dla wielu linijek! */
     }
     .task-state, .delete-btn, .drag-handle {
         font-size: 1.5rem; /* Jednolity rozmiar wszystkich ikon */
