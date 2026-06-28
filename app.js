@@ -519,7 +519,6 @@ function renderDays(dates) {
         header.innerHTML = `<span>${isDayDone ? '✓ ' : ''}${formatDisplayDate(dateObj)}</span><span>${doneCount}/${totalCount}</span>`;
         if (isDayDone) {
             header.style.color = 'var(--muted-text)';
-            header.style.textDecoration = 'line-through';
         }
         
 
@@ -783,15 +782,20 @@ function handleGesture() {
     const diffX = touchendX - touchstartX;
     const diffY = Math.abs(touchendY - touchstartY);
     
-    // Ignore swipe if user is scrolling vertically
-    if (diffY > 50 || Math.abs(diffX) < 50) return;
+    // Ignoruj gest, jeśli ruch był bardziej w pionie niż w poziomie (czyli użytkownik scrollował)
+    if (diffY > Math.abs(diffX)) return;
     
-    // Ignore if cursor is in textarea
-    if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') return;
+    // Ignoruj bardzo krótkie machnięcia
+    if (Math.abs(diffX) < 40) return;
     
-    if (diffX < -50) {
+    // Zdejmij focus z pola tekstowego, jeśli gest był wyraźnym przesunięciem ekranu
+    if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') {
+        document.activeElement.blur();
+    }
+    
+    if (diffX < -40) {
         handleSwipeNext();
-    } else if (diffX > 50) {
+    } else if (diffX > 40) {
         handleSwipePrev();
     }
 }
