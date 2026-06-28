@@ -1,4 +1,4 @@
-const CACHE_NAME = 'daily-planner-v3';
+const CACHE_NAME = 'daily-planner-v4';
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
@@ -9,8 +9,25 @@ self.addEventListener('install', (event) => {
                 './style.css',
                 './app.js',
                 './manifest.json',
+                './icon-192.png',
+                './icon-512.png',
                 'https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js'
             ]);
+        })
+    );
+});
+
+self.addEventListener('activate', (event) => {
+    // Usunięcie starych cache'y przy aktualizacji Service Workera
+    event.waitUntil(
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((cacheName) => {
+                    if (cacheName !== CACHE_NAME) {
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
         })
     );
 });
@@ -23,8 +40,8 @@ self.addEventListener('fetch', (event) => {
     }
     
     event.respondWith(
-        caches.match(event.request).then((response) => {
-            return response || fetch(event.request);
+        fetch(event.request).catch(() => {
+            return caches.match(event.request);
         })
     );
 });
