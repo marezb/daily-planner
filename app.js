@@ -531,8 +531,10 @@ function renderDays(dates) {
                 document.querySelectorAll('.day-card').forEach(c => {
                     if (c !== card) c.style.display = 'none';
                 });
+                setTimeout(() => card.querySelectorAll('.task-text').forEach(ta => ta.dispatchEvent(new Event('input'))), 10);
             } else {
                 card.classList.remove('fullscreen');
+                setTimeout(() => document.querySelectorAll('.day-card .task-text').forEach(ta => ta.dispatchEvent(new Event('input'))), 10);
             }
         };
         
@@ -811,6 +813,7 @@ function handleSwipeNext() {
             document.querySelectorAll('.day-card').forEach(c => {
                 if (c !== nextCard) c.style.display = 'none';
             });
+            setTimeout(() => nextCard.querySelectorAll('.task-text').forEach(ta => ta.dispatchEvent(new Event('input'))), 10);
         } else {
             currentHalfWeekStart.setDate(currentHalfWeekStart.getDate() + (currentHalfWeekStart.getDay() <= 3 && currentHalfWeekStart.getDay() > 0 ? 3 : 4));
             currentHalfWeekStart = getStartOfHalfWeek(currentHalfWeekStart);
@@ -835,6 +838,7 @@ function handleSwipePrev() {
             document.querySelectorAll('.day-card').forEach(c => {
                 if (c !== prevCard) c.style.display = 'none';
             });
+            setTimeout(() => prevCard.querySelectorAll('.task-text').forEach(ta => ta.dispatchEvent(new Event('input'))), 10);
         } else {
             currentHalfWeekStart.setDate(currentHalfWeekStart.getDate() - (currentHalfWeekStart.getDay() <= 3 && currentHalfWeekStart.getDay() > 0 ? 4 : 3));
             currentHalfWeekStart = getStartOfHalfWeek(currentHalfWeekStart);
