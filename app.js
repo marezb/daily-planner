@@ -1,5 +1,11 @@
-let gasUrl = localStorage.getItem('gas_url') || "";
-let gasToken = localStorage.getItem('gas_token') || "";
+let gasUrl = "";
+let gasToken = "";
+try {
+    gasUrl = localStorage.getItem('gas_url') || "";
+    gasToken = localStorage.getItem('gas_token') || "";
+} catch (e) {
+    console.warn("localStorage niedostępny (np. zablokowany w trybie Incognito/Prywatnym)");
+}
 
 let loadedFiles = {}; // { 'data_2026_06.json': { data: {} } }
 let futureTasks = [];
@@ -90,8 +96,12 @@ configApiBtn.addEventListener("click", () => {
         if (token !== null && token.trim() !== "") {
             gasUrl = url.trim();
             gasToken = token.trim();
-            localStorage.setItem('gas_url', gasUrl);
-            localStorage.setItem('gas_token', gasToken);
+            try {
+                localStorage.setItem('gas_url', gasUrl);
+                localStorage.setItem('gas_token', gasToken);
+            } catch (e) {
+                console.warn("Nie można zapisać w localStorage");
+            }
             initializeApp();
         }
     }
