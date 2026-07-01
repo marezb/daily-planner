@@ -213,14 +213,14 @@ h1 {
     cursor: pointer;
     min-width: 20px;
     padding: 2px;
-    transition: color 0.2s, opacity 0.2s;
-    opacity: 0;
-    pointer-events: none;
+    transition: color 0.2s;
+    display: none;
 }
 
 .task-item:focus-within .delete-btn {
-    opacity: 1;
-    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .delete-btn:hover {
@@ -252,6 +252,10 @@ h1 {
     align-items: center;
     justify-content: center;
     z-index: 10;
+}
+
+.task-item:focus-within .drag-handle {
+    display: none;
 }
 
 #future-panel .fab {
@@ -334,13 +338,19 @@ h1 {
         margin: 0;
         line-height: 1.2; /* Naturalny odstęp dla wielu linijek! */
     }
-    .task-state, .delete-btn, .drag-handle {
+    .task-state, .drag-handle {
         font-size: 1.5rem; /* Jednolity rozmiar wszystkich ikon */
         padding: 0 8px; /* TYLKO poziomy odstęp! Żadnego pionowego rozpychania */
         height: 44px; /* Stała wysokość elementu na całą linię taska */
         display: flex;
         align-items: center;
         justify-content: center;
+    }
+    .delete-btn {
+        font-size: 1.5rem;
+        padding: 0 8px;
+        height: 44px;
+        /* Nie nadpisujemy display: none; tutaj. Jest nadpisywane tylko na focus-within */
     }
     .icon-btn {
         padding: 12px 8px; /* Większy obszar klikalny, ale mniejszy margines boczny */
