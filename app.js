@@ -227,10 +227,7 @@ async function saveTasksForDate(dateStr) {
         await fetchFromGAS('POST', filename, fileInfo.data);
     }
 }
- else {
-        console.warn(`Plik ${filename} nie ma ID, zmiany na ten miesiąc nie zostaną zapisane w PWA.`);
-    }
-}
+
 
 function sortTasksArray(arr) {
     arr.sort((a, b) => {
@@ -484,10 +481,7 @@ async function cycleState(index, isFuture, dateStr = null) {
     }
 }
 
-async function saveFutureTasks() {
-    if (!futureFileId) return;
-    saveJsonToGoogleDrive(futureFileId, futureTasks);
-}
+
 
 prevHalfBtn.addEventListener("click", () => {
     currentHalfWeekStart.setDate(currentHalfWeekStart.getDate() - (currentHalfWeekStart.getDay() <= 3 && currentHalfWeekStart.getDay() > 0 ? 4 : 3));
