@@ -97,17 +97,97 @@ function getHalfWeekDates(startDate) {
     }
     return dates;
 }
+// ----------------------------------------------------
+// SORTABLE HELPER (safe before CDN loads)
+// ----------------------------------------------------
+let sortableReady = false;
+const pendingSortableContainers = [];
 
-window.onload = () => {
+function tryInitSortable(container) {
+    if (typeof Sortable !== 'undefined') {
+        new Sortable(container, {
+            group: 'shared',
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: handleDragEnd
+        });
+    } else {
+        pendingSortableContainers.push(container);
+    }
+}
+
+function onSortableLoaded() {
+    if (sortableReady) return;
+    sortableReady = true;
+    console.log('[Init] SortableJS loaded, initializing pending containers:', pendingSortableContainers.length);
+    pendingSortableContainers.forEach(c => tryInitSortable(c));
+    pendingSortableContainers.length = 0;
+}
+
+// Check periodically if Sortable loaded (async script has no guaranteed callback)
+const sortableCheckInterval = setInterval(() => {
+    if (typeof Sortable !== 'undefined') {
+        clearInterval(sortableCheckInterval);
+        onSortableLoaded();
+    }
+}, 50);
+// Also check on window.onload as fallback
+window.addEventListener('load', () => {
+    if (typeof Sortable !== 'undefined') onSortableLoaded();
+});
+
+// ----------------------------------------------------
+// PHASE 1: IMMEDIATE CACHE RENDER (runs synchronously)
+// ----------------------------------------------------
+(function immediateInit() {
     const today = new Date();
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     globalTodayDisplay.textContent = `${days[today.getDay()]} ${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
     
-    if (gasUrl && gasToken) {
-        initializeApp();
+    if (!gasUrl || !gasToken) return; // No API config — show config button only
+    
+    // Show UI immediately
+    configApiBtn.classList.add("hidden");
+    futureLogBtn.classList.remove("hidden");
+    mainWrapper.classList.remove("hidden");
+    
+    // Render Future Log from cache
+    const cachedFuture = getCachedData('future_log.json');
+    if (cachedFuture !== null) {
+        futureTasks = extractTasksArray(cachedFuture);
+        sortTasksArray(futureTasks);
+        renderFutureTasks();
+        console.log(`[Cache] Future Log: ${futureTasks.length} tasks rendered instantly`);
     }
-};
+    
+    // Render half-week days from cache
+    const dates = getHalfWeekDates(currentHalfWeekStart);
+    const filenamesToFetch = [...new Set(dates.map(d => getFilenameForDate(d)))];
+    let hasCachedDays = false;
+    for (const filename of filenamesToFetch) {
+        const cached = getCachedData(filename);
+        if (cached && typeof cached === 'object') {
+            loadedFiles[filename] = { data: cached, fromCache: true };
+            hasCachedDays = true;
+        }
+    }
+    if (hasCachedDays) {
+        renderDays(dates);
+        console.log('[Cache] Days rendered instantly from cache');
+    }
+    
+    // Scroll to today (instant, no animation for cache render)
+    const dzisString = formatDate(new Date());
+    const dzisCard = document.querySelector(`.day-card[data-date="${dzisString}"]`);
+    if (dzisCard) {
+        dzisCard.scrollIntoView({ block: 'center' });
+    }
+    
+    // Phase 2: start network refresh
+    refreshFromNetwork();
+})();
 
 configApiBtn.addEventListener("click", () => {
     const url = prompt("Wklej pełny adres URL (Web App) ze skryptu Google Apps Script:", gasUrl);
@@ -127,18 +207,39 @@ configApiBtn.addEventListener("click", () => {
     }
 });
 
+// ----------------------------------------------------
+// PHASE 2: NETWORK REFRESH (async, runs in background)
+// ----------------------------------------------------
+async function refreshFromNetwork() {
+    showLoading();
+    
+    // Init Sortable on future tasks container
+    tryInitSortable(futureTasksContainer);
+    
+    // Parallel loading — Future Log + Half Week at the same time
+    await Promise.all([
+        loadFutureLog(),
+        loadHalfWeek(currentHalfWeekStart)
+    ]);
+    
+    hideLoading();
+    
+    setTimeout(() => {
+        const dzisString = formatDate(new Date());
+        const dzisCard = document.querySelector(`.day-card[data-date="${dzisString}"]`);
+        if (dzisCard) {
+            dzisCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, 200);
+}
+
+// Full init (used when configuring API for the first time)
 async function initializeApp() {
     configApiBtn.classList.add("hidden");
     futureLogBtn.classList.remove("hidden");
     mainWrapper.classList.remove("hidden");
     
-    new Sortable(futureTasksContainer, {
-        group: 'shared',
-        handle: '.drag-handle',
-        animation: 150,
-        ghostClass: 'sortable-ghost',
-        onEnd: handleDragEnd
-    });
+    tryInitSortable(futureTasksContainer);
 
     // Parallel loading — Future Log + Half Week at the same time
     await Promise.all([
@@ -566,13 +667,7 @@ function renderDays(dates) {
             setTimeout(() => el.querySelector('.task-text').dispatchEvent(new Event('input')), 0);
         });
         
-        new Sortable(tContainer, {
-            group: 'shared',
-            handle: '.drag-handle',
-            animation: 150,
-            ghostClass: 'sortable-ghost',
-            onEnd: handleDragEnd
-        });
+        tryInitSortable(tContainer);
         
         const addBtn = document.createElement('button');
         addBtn.className = 'text-add-btn';
