@@ -1,18 +1,11 @@
-const CLIENT_ID = '263456020482-d304dup1jkkgdk0no23c25q0goa6cboh.apps.googleusercontent.com';
-// Wymagane uprawnienia do wyszukiwania, odczytu i zapisu plików
-const SCOPES = 'https://www.googleapis.com/auth/drive';
-const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+let gasUrl = localStorage.getItem('gas_url') || "";
+let gasToken = localStorage.getItem('gas_token') || "";
 
-let tokenClient;
-let gapiInited = false;
-let gisInited = false;
-let loadedFiles = {}; // { 'data_2026_06.json': { id: '...', data: {} } }
+let loadedFiles = {}; // { 'data_2026_06.json': { data: {} } }
 let futureTasks = [];
-let futureFileId = null;
 let currentHalfWeekStart = getStartOfHalfWeek(new Date());
 
-const loginBtn = document.getElementById("login-btn");
-const logoutBtn = document.getElementById("logout-btn");
+const configApiBtn = document.getElementById("config-api-btn");
 const futureLogBtn = document.getElementById("future-log-btn");
 const mainWrapper = document.getElementById("main-wrapper");
 const daysContainer = document.getElementById("days-container");
@@ -79,107 +72,33 @@ function getHalfWeekDates(startDate) {
     return dates;
 }
 
-// Inicjalizacja biblioteki GAPI (Google API)
-function gapiLoaded() {
-    gapi.load('client', initializeGapiClient);
-}
-
-async function initializeGapiClient() {
-    await gapi.client.init({
-        discoveryDocs: [DISCOVERY_DOC],
-    });
-    gapiInited = true;
-    maybeEnableButtons();
-}
-
-// Inicjalizacja biblioteki GIS (Google Identity Services)
-function gisLoaded() {
-    tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPES,
-        callback: '',
-    });
-    gisInited = true;
-    maybeEnableButtons();
-}
-
-function maybeEnableButtons() {
-    if (gapiInited && gisInited) {
-        loginBtn.disabled = false;
-        
-        const savedToken = localStorage.getItem('gapi_token');
-        if (savedToken) {
-            const tokenObj = JSON.parse(savedToken);
-            if (tokenObj.expires_at > Date.now()) {
-                gapi.client.setToken({ access_token: tokenObj.access_token });
-                onAuthenticated();
-                return;
-            } else {
-                localStorage.removeItem('gapi_token');
-            }
-        }
-    }
-}
-
 window.onload = () => {
-    loginBtn.disabled = true;
-    if (typeof gapi !== 'undefined') gapiLoaded();
-    if (typeof google !== 'undefined') gisLoaded();
-    
-    // Set global header
     const today = new Date();
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     globalTodayDisplay.textContent = `${days[today.getDay()]} ${today.getDate()} ${months[today.getMonth()]} ${today.getFullYear()}`;
+    
+    if (gasUrl && gasToken) {
+        initializeApp();
+    }
 };
 
-loginBtn.addEventListener("click", () => {
-    tokenClient.callback = async (resp) => {
-        if (resp.error !== undefined) {
-            throw (resp);
+configApiBtn.addEventListener("click", () => {
+    const url = prompt("Wklej pełny adres URL (Web App) ze skryptu Google Apps Script:", gasUrl);
+    if (url !== null && url.trim() !== "") {
+        const token = prompt("Podaj swój tajny klucz (Token API):", gasToken);
+        if (token !== null && token.trim() !== "") {
+            gasUrl = url.trim();
+            gasToken = token.trim();
+            localStorage.setItem('gas_url', gasUrl);
+            localStorage.setItem('gas_token', gasToken);
+            initializeApp();
         }
-        // Zapisz token
-        const expiresAt = Date.now() + (resp.expires_in * 1000);
-        localStorage.setItem('gapi_token', JSON.stringify({
-            access_token: resp.access_token,
-            expires_at: expiresAt
-        }));
-        
-        onAuthenticated();
-    };
-
-    if (gapi.client.getToken() === null) {
-        tokenClient.requestAccessToken({prompt: 'consent'});
-    } else {
-        tokenClient.requestAccessToken({prompt: ''});
     }
 });
 
-function refreshGoogleToken() {
-    return new Promise((resolve, reject) => {
-        tokenClient.callback = (resp) => {
-            if (resp.error) {
-                reject(resp.error);
-                return;
-            }
-            const expiresAt = Date.now() + (resp.expires_in * 1000);
-            localStorage.setItem('gapi_token', JSON.stringify({
-                access_token: resp.access_token,
-                expires_at: expiresAt
-            }));
-            // Update the global gapi client token
-            gapi.client.setToken({ access_token: resp.access_token });
-            resolve(resp.access_token);
-        };
-        tokenClient.requestAccessToken({prompt: ''});
-    });
-}
-
-// Usunięto przestarzały logoutBtn.addEventListener
-
-async function onAuthenticated() {
-    loginBtn.classList.add("hidden");
-    if(logoutBtn) logoutBtn.classList.remove("hidden");
+async function initializeApp() {
+    configApiBtn.classList.add("hidden");
     futureLogBtn.classList.remove("hidden");
     mainWrapper.classList.remove("hidden");
     
@@ -194,7 +113,6 @@ async function onAuthenticated() {
     await loadFutureLog();
     await loadHalfWeek(currentHalfWeekStart);
     
-    // Automatyczne zjechanie do dnia dzisiejszego zaraz po uruchomieniu aplikacji
     setTimeout(() => {
         const dzisString = formatDate(new Date());
         const dzisCard = document.querySelector(`.day-card[data-date="${dzisString}"]`);
@@ -206,13 +124,13 @@ async function onAuthenticated() {
 
 function closePanel() {
     futurePanel.classList.add("hidden");
+    futureLogBtn.classList.remove("active");
 }
 
 futureLogBtn.addEventListener("click", () => {
     futurePanel.classList.toggle("hidden");
+    futureLogBtn.classList.toggle("active");
     if (!futurePanel.classList.contains("hidden")) {
-        // Zamiast walczyć z przeliczaniem wysokości na ukrytych elementach,
-        // po prostu rysujemy cały Future Log na nowo, gdy panel staje się widoczny!
         setTimeout(() => {
             renderFutureTasks();
             futurePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -222,94 +140,52 @@ futureLogBtn.addEventListener("click", () => {
 
 closeFutureBtn.addEventListener("click", closePanel);
 
-async function loadFutureLog() {
-    futureFileId = await findFileId("future_log.json");
-    if (futureFileId) {
-        futureTasks = await fetchJsonFromGoogleDrive(futureFileId);
-        if (!Array.isArray(futureTasks)) futureTasks = [];
-    } else {
-        futureTasks = [];
+// ----------------------------------------------------
+// GOOGLE APPS SCRIPT API CALLS
+// ----------------------------------------------------
+
+async function fetchFromGAS(action, filename, payload = null) {
+    if (!gasUrl || !gasToken) return null;
+    try {
+        const url = new URL(gasUrl);
+        url.searchParams.append('action', action);
+        url.searchParams.append('filename', filename);
+        url.searchParams.append('token', gasToken);
+        
+        let response;
+        if (action === 'GET') {
+            response = await fetch(url.toString(), {
+                method: 'GET'
+            });
+        } else if (action === 'POST') {
+            response = await fetch(url.toString(), {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+        }
+        
+        if (!response.ok) throw new Error("Sieć odpowiedziała błędem");
+        const json = await response.json();
+        if (!json.success) {
+            if (action === 'GET') return {};
+            throw new Error(json.error || "Nieznany błąd serwera");
+        }
+        return json.data;
+    } catch (err) {
+        console.error("Błąd połączenia z GAS:", err);
+        return action === 'GET' ? {} : null;
     }
+}
+
+async function loadFutureLog() {
+    const data = await fetchFromGAS('GET', 'future_log.json');
+    futureTasks = Array.isArray(data) ? data : [];
     sortTasksArray(futureTasks);
     renderFutureTasks();
 }
 
-// ----------------------------------------------------
-// GOOGLE DRIVE API CALLS
-// ----------------------------------------------------
-
-// Znajdź plik na Dysku Google po nazwie (zwraca ID pliku)
-async function findFileId(filename) {
-    let response;
-    try {
-        response = await gapi.client.drive.files.list({
-            q: `name='${filename}' and trashed=false`,
-            fields: 'files(id, name)',
-            spaces: 'drive',
-        });
-    } catch (err) {
-        console.error("Błąd wyszukiwania pliku:", err);
-        return null;
-    }
-    const files = response.result.files;
-    if (files && files.length > 0) {
-        return files[0].id;
-    } else {
-        return null;
-    }
-}
-
-// Pobierz zawartość (zawartość JSON)
-async function fetchJsonFromGoogleDrive(fileId) {
-    try {
-        const response = await gapi.client.drive.files.get({
-            fileId: fileId,
-            alt: 'media'
-        });
-        
-        // Czasami Google Drive API zwraca string dla JSON-a, jeśli był pobierany jako media.
-        if (typeof response.result === 'string') {
-            return JSON.parse(response.result);
-        }
-        return response.result;
-    } catch (err) {
-        console.error("Błąd pobierania zawartości:", err);
-        return {};
-    }
-}
-
-// Zaktualizuj zawartość pliku (PATCH media)
-async function saveJsonToGoogleDrive(fileId, data, isRetry = false) {
-    try {
-        const url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`;
-        const token = gapi.client.getToken().access_token;
-        
-        const response = await fetch(url, {
-            method: 'PATCH',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data, null, 4)
-        });
-        
-        if (response.status === 401 && !isRetry) {
-            console.log("Token wygasł, próbuję odnowić w tle...");
-            try {
-                await refreshGoogleToken();
-                return await saveJsonToGoogleDrive(fileId, data, true);
-            } catch (refreshErr) {
-                console.error("Nie udało się odnowić tokenu", refreshErr);
-                alert("Sesja Google wygasła. Kliknij Wyloguj i Zaloguj ponownie.");
-                return;
-            }
-        }
-        
-        if (!response.ok) throw new Error("Błąd zapisu do chmury Google!");
-    } catch (err) {
-        console.error("Błąd zapisywania:", err);
-        alert("Błąd zapisu! Zobacz konsolę.");
-    }
+async function saveFutureTasks() {
+    await fetchFromGAS('POST', 'future_log.json', futureTasks);
 }
 
 // ----------------------------------------------------
@@ -324,12 +200,8 @@ async function loadHalfWeek(startDate) {
     
     for (const filename of filenamesToFetch) {
         if (!loadedFiles[filename]) {
-            const fileId = await findFileId(filename);
-            let data = {};
-            if (fileId) {
-                data = await fetchJsonFromGoogleDrive(fileId);
-            }
-            loadedFiles[filename] = { id: fileId, data: data };
+            const data = await fetchFromGAS('GET', filename) || {};
+            loadedFiles[filename] = { data: data };
         }
     }
     
@@ -351,9 +223,11 @@ async function saveTasksForDate(dateStr) {
     const d = new Date(dateStr);
     const filename = getFilenameForDate(d);
     const fileInfo = loadedFiles[filename];
-    if (fileInfo && fileInfo.id) {
-        saveJsonToGoogleDrive(fileInfo.id, fileInfo.data);
-    } else {
+    if (fileInfo) {
+        await fetchFromGAS('POST', filename, fileInfo.data);
+    }
+}
+ else {
         console.warn(`Plik ${filename} nie ma ID, zmiany na ten miesiąc nie zostaną zapisane w PWA.`);
     }
 }
@@ -490,9 +364,9 @@ function createTaskElement(task, index, isFuture, dateStr = null) {
         }
     };
     
-    div.appendChild(dragHandle);
     div.appendChild(stateBtn);
     div.appendChild(textInput);
+    div.appendChild(dragHandle);
     div.appendChild(deleteBtn);
     
     return div;

@@ -199,7 +199,8 @@ h1 {
     overflow: hidden;
 }
 
-.task-item.completed .task-text, .task-item.migrated .task-text {
+.task-item.completed .task-text, .task-item.migrated .task-text,
+.task-item.completed .task-state, .task-item.migrated .task-state {
     color: var(--muted-text);
     text-decoration: none;
 }
@@ -212,11 +213,31 @@ h1 {
     cursor: pointer;
     min-width: 20px;
     padding: 2px;
-    transition: color 0.2s;
+    transition: color 0.2s, opacity 0.2s;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.task-item:focus-within .delete-btn {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .delete-btn:hover {
     color: #ff5555;
+}
+
+#future-log-btn {
+    background-color: transparent;
+    color: var(--text-color);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: background-color 0.2s, color 0.2s;
+}
+
+#future-log-btn.active {
+    background-color: var(--accent-color);
+    color: #000;
+    border: 1px solid var(--accent-color);
 }
 
 /* Usunięte .fab */
