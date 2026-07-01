@@ -11,6 +11,26 @@ let loadedFiles = {}; // { 'data_2026_06.json': { data: {} } }
 let futureTasks = [];
 let currentHalfWeekStart = getStartOfHalfWeek(new Date());
 
+// ----------------------------------------------------
+// LOCALSTORAGE CACHE (stale-while-revalidate)
+// ----------------------------------------------------
+const CACHE_PREFIX = 'dp_cache_';
+
+function getCachedData(filename) {
+    try {
+        const raw = localStorage.getItem(CACHE_PREFIX + filename);
+        return raw ? JSON.parse(raw) : null;
+    } catch(e) { return null; }
+}
+
+function setCachedData(filename, data) {
+    try {
+        localStorage.setItem(CACHE_PREFIX + filename, JSON.stringify(data));
+    } catch(e) {
+        console.warn('[Cache] localStorage zapis nieudany');
+    }
+}
+
 const configApiBtn = document.getElementById("config-api-btn");
 const futureLogBtn = document.getElementById("future-log-btn");
 const mainWrapper = document.getElementById("main-wrapper");
@@ -120,8 +140,11 @@ async function initializeApp() {
         onEnd: handleDragEnd
     });
 
-    await loadFutureLog();
-    await loadHalfWeek(currentHalfWeekStart);
+    // Parallel loading — Future Log + Half Week at the same time
+    await Promise.all([
+        loadFutureLog(),
+        loadHalfWeek(currentHalfWeekStart)
+    ]);
     
     setTimeout(() => {
         const dzisString = formatDate(new Date());
@@ -240,16 +263,33 @@ function extractTasksArray(data) {
 
 async function loadFutureLog() {
     console.log('[FutureLog] Ładowanie future_log.json...');
-    const data = await fetchFromGAS('GET', 'future_log.json');
     
-    futureTasks = extractTasksArray(data);
-    console.log(`[FutureLog] Załadowano ${futureTasks.length} zadań`);
+    // 1. Instant render from cache
+    const cached = getCachedData('future_log.json');
+    if (cached !== null) {
+        futureTasks = extractTasksArray(cached);
+        sortTasksArray(futureTasks);
+        renderFutureTasks();
+        console.log(`[FutureLog] Załadowano ${futureTasks.length} zadań z cache`);
+    }
     
-    sortTasksArray(futureTasks);
-    renderFutureTasks();
+    // 2. Fetch fresh data from GAS
+    const fresh = await fetchFromGAS('GET', 'future_log.json');
+    if (fresh !== null) {
+        setCachedData('future_log.json', fresh);
+        futureTasks = extractTasksArray(fresh);
+        console.log(`[FutureLog] Odświeżono: ${futureTasks.length} zadań z serwera`);
+        sortTasksArray(futureTasks);
+        renderFutureTasks();
+    } else if (cached === null) {
+        // No cache, no server data
+        futureTasks = [];
+        renderFutureTasks();
+    }
 }
 
 async function saveFutureTasks() {
+    setCachedData('future_log.json', futureTasks);
     await fetchFromGAS('POST', 'future_log.json', futureTasks);
 }
 
@@ -263,14 +303,52 @@ async function loadHalfWeek(startDate) {
     const dates = getHalfWeekDates(startDate);
     const filenamesToFetch = [...new Set(dates.map(d => getFilenameForDate(d)))];
     
+    // 1. Instant render from cache for files not yet in memory
+    let renderedFromCache = false;
     for (const filename of filenamesToFetch) {
         if (!loadedFiles[filename]) {
-            const data = await fetchFromGAS('GET', filename) || {};
-            loadedFiles[filename] = { data: data };
+            const cached = getCachedData(filename);
+            if (cached && typeof cached === 'object') {
+                loadedFiles[filename] = { data: cached, fromCache: true };
+                renderedFromCache = true;
+            }
+        }
+    }
+    if (renderedFromCache) {
+        renderDays(dates);
+        hideLoading();
+    }
+    
+    // 2. Fetch fresh data in PARALLEL for all files that need refreshing
+    const filesToRefresh = filenamesToFetch.filter(f => 
+        !loadedFiles[f] || loadedFiles[f].fromCache
+    );
+    
+    if (filesToRefresh.length > 0) {
+        const results = await Promise.all(
+            filesToRefresh.map(async (filename) => {
+                const data = await fetchFromGAS('GET', filename);
+                return { filename, data };
+            })
+        );
+        
+        let needsRerender = false;
+        for (const { filename, data } of results) {
+            if (data !== null && typeof data === 'object') {
+                setCachedData(filename, data);
+                loadedFiles[filename] = { data };
+                needsRerender = true;
+            } else if (!loadedFiles[filename]) {
+                // No cache and no server data — initialize empty
+                loadedFiles[filename] = { data: {} };
+            }
+        }
+        
+        if (needsRerender || !renderedFromCache) {
+            renderDays(dates);
         }
     }
     
-    renderDays(dates);
     hideLoading();
 }
 
@@ -289,6 +367,7 @@ async function saveTasksForDate(dateStr) {
     const filename = getFilenameForDate(d);
     const fileInfo = loadedFiles[filename];
     if (fileInfo) {
+        setCachedData(filename, fileInfo.data);
         await fetchFromGAS('POST', filename, fileInfo.data);
     }
 }
