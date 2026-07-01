@@ -218,7 +218,7 @@ h1 {
 }
 
 .task-item:focus-within .delete-btn {
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: center;
 }
@@ -255,7 +255,7 @@ h1 {
 }
 
 .task-item:focus-within .drag-handle {
-    display: none;
+    display: none !important;
 }
 
 #future-panel .fab {
