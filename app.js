@@ -155,41 +155,96 @@ closeFutureBtn.addEventListener("click", closePanel);
 // ----------------------------------------------------
 
 async function fetchFromGAS(action, filename, payload = null) {
-    if (!gasUrl || !gasToken) return null;
+    if (!gasUrl || !gasToken) {
+        console.warn(`[GAS] Brak konfiguracji API (url=${!!gasUrl}, token=${!!gasToken})`);
+        return null;
+    }
     try {
         const url = new URL(gasUrl);
         url.searchParams.append('action', action);
         url.searchParams.append('filename', filename);
         url.searchParams.append('token', gasToken);
         
-        let response;
+        const fetchOptions = {
+            redirect: 'follow'
+        };
+        
         if (action === 'GET') {
-            response = await fetch(url.toString(), {
-                method: 'GET'
-            });
+            fetchOptions.method = 'GET';
         } else if (action === 'POST') {
-            response = await fetch(url.toString(), {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
+            fetchOptions.method = 'POST';
+            fetchOptions.body = JSON.stringify(payload);
         }
         
-        if (!response.ok) throw new Error("Sieć odpowiedziała błędem");
-        const json = await response.json();
-        if (!json.success) {
-            if (action === 'GET') return {};
-            throw new Error(json.error || "Nieznany błąd serwera");
+        console.log(`[GAS] ${action} ${filename}...`);
+        const response = await fetch(url.toString(), fetchOptions);
+        
+        if (!response.ok) {
+            console.error(`[GAS] HTTP error ${response.status} for ${filename}`);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
+        
+        // GAS web apps sometimes return text/html instead of application/json
+        const responseText = await response.text();
+        console.log(`[GAS] Raw response for ${filename}:`, responseText.substring(0, 500));
+        
+        let json;
+        try {
+            json = JSON.parse(responseText);
+        } catch (parseErr) {
+            console.error(`[GAS] Response for ${filename} is not valid JSON:`, responseText.substring(0, 200));
+            return null;
+        }
+        
+        if (!json.success) {
+            console.warn(`[GAS] Server returned success=false for ${filename}:`, json.error || 'brak szczegółów');
+            return null;
+        }
+        
+        console.log(`[GAS] OK ${filename}, data type: ${Array.isArray(json.data) ? 'array' : typeof json.data}`);
         return json.data;
     } catch (err) {
-        console.error("Błąd połączenia z GAS:", err);
-        return action === 'GET' ? {} : null;
+        console.error(`[GAS] Błąd połączenia dla ${filename}:`, err);
+        return null;
     }
 }
 
+/**
+ * Extracts a flat array of tasks from various possible GAS response formats.
+ * Handles: direct array, object with nested array, object with numeric keys, null/undefined.
+ */
+function extractTasksArray(data) {
+    // Direct array — ideal case
+    if (Array.isArray(data)) return data;
+    
+    // Null, undefined, empty string, etc.
+    if (!data || typeof data !== 'object') return [];
+    
+    // Object wrapping: { data: [...] }, { future_log: [...] }, { tasks: [...] }, { items: [...] }
+    for (const key of ['data', 'future_log', 'tasks', 'items']) {
+        if (Array.isArray(data[key])) return data[key];
+    }
+    
+    // Object with numeric keys (GAS sometimes serializes arrays as objects): {"0": {...}, "1": {...}}
+    const keys = Object.keys(data);
+    if (keys.length > 0 && keys.every(k => /^\d+$/.test(k))) {
+        return keys
+            .sort((a, b) => Number(a) - Number(b))
+            .map(k => data[k])
+            .filter(item => item && typeof item === 'object');
+    }
+    
+    console.warn('[FutureLog] Nierozpoznany format danych:', JSON.stringify(data).substring(0, 300));
+    return [];
+}
+
 async function loadFutureLog() {
+    console.log('[FutureLog] Ładowanie future_log.json...');
     const data = await fetchFromGAS('GET', 'future_log.json');
-    futureTasks = Array.isArray(data) ? data : [];
+    
+    futureTasks = extractTasksArray(data);
+    console.log(`[FutureLog] Załadowano ${futureTasks.length} zadań`);
+    
     sortTasksArray(futureTasks);
     renderFutureTasks();
 }
