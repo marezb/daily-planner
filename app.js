@@ -535,112 +535,6 @@ addFutureTaskBtn.addEventListener("click", () => {
 // GOOGLE DRIVE API CALLS
 // ----------------------------------------------------
 
-function refreshGoogleToken() {
-    return new Promise((resolve, reject) => {
-        tokenClient.callback = (resp) => {
-            if (resp.error) {
-                reject(resp.error);
-                return;
-            }
-            const expiresAt = Date.now() + (resp.expires_in * 1000);
-            localStorage.setItem('gapi_token', JSON.stringify({
-                access_token: resp.access_token,
-                expires_at: expiresAt
-            }));
-            // Update the global gapi client token
-            gapi.client.setToken({ access_token: resp.access_token });
-            resolve(resp.access_token);
-        };
-        tokenClient.requestAccessToken({prompt: ''});
-    });
-}
-
-async function findFileId(filename) {
-    let response;
-    try {
-        response = await gapi.client.drive.files.list({
-            q: `name='${filename}' and trashed=false`,
-            fields: 'files(id, name)',
-            spaces: 'drive'
-        });
-    } catch (err) {
-        console.error('Błąd podczas wyszukiwania pliku', err);
-        return null;
-    }
-    const files = response.result.files;
-    if (files && files.length > 0) {
-        return files[0].id;
-    } else {
-        return null;
-    }
-}
-
-async function fetchJsonFromGoogleDrive(fileId) {
-    try {
-        const response = await gapi.client.drive.files.get({
-            fileId: fileId,
-            alt: 'media'
-        });
-        if (!response.body) return {};
-        if (typeof response.body === 'string') {
-            return JSON.parse(response.body);
-        }
-        return response.result;
-    } catch (err) {
-        console.error('Błąd podczas pobierania zawartości pliku', err);
-        return {};
-    }
-}
-
-async function saveJsonToGoogleDrive(fileId, dataObj) {
-    const url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`;
-    const token = gapi.client.getToken().access_token;
-    
-    try {
-        const response = await fetch(url, {
-            method: 'PATCH',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(dataObj)
-        });
-        if (response.status === 401) {
-            console.warn('Token wygasł podczas zapisu, odświeżam i ponawiam...');
-            const newToken = await refreshGoogleToken();
-            const retryResponse = await fetch(url, {
-                method: 'PATCH',
-                headers: {
-                    'Authorization': `Bearer ${newToken}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(dataObj)
-            });
-            if (!retryResponse.ok) {
-                console.error('Błąd po ponowieniu zapisu', await retryResponse.text());
-            }
-        } else if (!response.ok) {
-            console.error('Błąd podczas zapisywania pliku', await response.text());
-        }
-    } catch (err) {
-        console.error('Wyjątek podczas zapisywania do Google Drive', err);
-    }
-}
-
-async function loadFutureLog() {
-    futureFileId = await findFileId('future_log.json');
-    if (futureFileId) {
-        futureTasks = await fetchJsonFromGoogleDrive(futureFileId);
-        if (!Array.isArray(futureTasks)) futureTasks = [];
-    } else {
-        futureTasks = [];
-    }
-    sortTasksArray(futureTasks);
-    renderFutureTasks();
-}
-
-
-
 // ----------------------------------------------------
 // SWIPE GESTURES & FULLSCREEN
 // ----------------------------------------------------
@@ -649,10 +543,12 @@ let touchstartX = 0;
 let touchstartY = 0;
 let touchendX = 0;
 let touchendY = 0;
+let touchstartScrollY = 0;
 
 document.addEventListener('touchstart', e => {
     touchstartX = e.changedTouches[0].screenX;
     touchstartY = e.changedTouches[0].screenY;
+    touchstartScrollY = window.scrollY;
 }, {passive: true});
 
 document.addEventListener('touchend', e => {
@@ -663,18 +559,27 @@ document.addEventListener('touchend', e => {
 
 function handleGesture() {
     const diffX = touchendX - touchstartX;
-    const diffY = Math.abs(touchendY - touchstartY);
-    
-    // Ignoruj gest, jeśli ruch był bardziej w pionie niż w poziomie (czyli użytkownik scrollował)
-    if (diffY > Math.abs(diffX)) return;
-    
-    // Ignoruj bardzo krótkie machnięcia
-    if (Math.abs(diffX) < 40) return;
+    const diffY = touchendY - touchstartY;
+    const absDiffX = Math.abs(diffX);
+    const absDiffY = Math.abs(diffY);
     
     // Zdejmij focus z pola tekstowego, jeśli gest był wyraźnym przesunięciem ekranu
-    if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') {
+    if (Math.max(absDiffX, absDiffY) > 40 && document.activeElement && document.activeElement.tagName === 'TEXTAREA') {
         document.activeElement.blur();
     }
+    
+    // Jeśli ruch był bardziej w pionie (scrollowanie lub pull-to-refresh)
+    if (absDiffY > absDiffX) {
+        // Pull-to-refresh: szybki ruch w dół, będąc na samej górze
+        if (diffY > 100 && touchstartScrollY <= 0) {
+            console.log("Pull to refresh triggered");
+            initializeApp();
+        }
+        return;
+    }
+    
+    // Ignoruj bardzo krótkie machnięcia w poziomie
+    if (absDiffX < 40) return;
     
     if (diffX < -40) {
         handleSwipeNext();
