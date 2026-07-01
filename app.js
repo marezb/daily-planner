@@ -404,23 +404,20 @@ async function loadHalfWeek(startDate) {
     const dates = getHalfWeekDates(startDate);
     const filenamesToFetch = [...new Set(dates.map(d => getFilenameForDate(d)))];
     
-    // 1. Instant render from cache for files not yet in memory
-    let renderedFromCache = false;
+    // 1. Load from cache for files not yet in memory
     for (const filename of filenamesToFetch) {
         if (!loadedFiles[filename]) {
             const cached = getCachedData(filename);
             if (cached && typeof cached === 'object') {
                 loadedFiles[filename] = { data: cached, fromCache: true };
-                renderedFromCache = true;
             }
         }
     }
-    if (renderedFromCache) {
-        renderDays(dates);
-        hideLoading();
-    }
     
-    // 2. Fetch fresh data in PARALLEL for all files that need refreshing
+    // 2. ALWAYS render days with current data (cached or in-memory)
+    renderDays(dates);
+    
+    // 3. Fetch fresh data in PARALLEL for files that need refreshing
     const filesToRefresh = filenamesToFetch.filter(f => 
         !loadedFiles[f] || loadedFiles[f].fromCache
     );
@@ -440,12 +437,11 @@ async function loadHalfWeek(startDate) {
                 loadedFiles[filename] = { data };
                 needsRerender = true;
             } else if (!loadedFiles[filename]) {
-                // No cache and no server data — initialize empty
                 loadedFiles[filename] = { data: {} };
             }
         }
         
-        if (needsRerender || !renderedFromCache) {
+        if (needsRerender) {
             renderDays(dates);
         }
     }
